@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" integrity="sha512-5A8nwdMOWrSz20fDsjczgUidUBR8liPYU+WymTZP1lmY9G6Oc7HlZv156XqnsgNUzTyMefFTcsFH/tnJE/+xBg==" crossorigin="anonymous" />
+    <title>Map</title>
+
+    <style>
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body" id="world">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="vegetation" width="720" height="480" style="display: block"></canvas>
+    <canvas id="displace" width="720" height="480" style="display: none"></canvas>
+    <canvas id="color" width="720" height="480" style="display: none"></canvas>
+
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js" integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha512-dLxUelApnYxpLt6K2iomGngnHO83iUvZytA3YjDUCjT0HDOHKXnVYdf3hU4JjM8uEhxf9nD1/ey98U3t2vZ0qQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://unpkg.com/simplex-noise@2.4.0/simplex-noise.js"></script>
+    <script src="/dnd/maps/js/colors.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stackblur-canvas/dist/stackblur.min.js"></script>
+    <script src="/dnd/maps/js/sphere-noise.js"></script>
+
+    <script>
+        //<script src="/dnd/maps/js/stackblur.js"><//script>
+
+        var start = {
+            "position": 0,
+            "rgb": [0, 20, 70]
+        };
+
+        var mid = {
+            "position": .4,
+            "rgb": [5, 70, 108]
+        };
+
+        var mid2 = {
+            "position": 0.42,
+            "rgb": [200, 177, 153]
+        };
+
+        var mid3 = {
+            "position": 0.98,
+            "rgb": [120, 110, 108]
+        };
+
+        var end = {
+            "position": 1,
+            "rgb": [250, 252, 255]
+        };
+
+        var colors = [start, mid, mid2, mid3, end];
+
+        var clipFloor = 0.3
+        var seaLevel = 0;
+
+        var optionsVegetation = {
+            amplitude: .5,
+            frequency: .24,
+            octaves: 3,
+            persistence: .7
+        };
+
+
+        var canvasVegetation = document.getElementById('vegetation');
+        makeSphereSurface(canvasVegetation, optionsVegetation, .8, 0);
+
+
+        var veg0 = {
+            "position": 0,
+            "rgb": [0, 0, 0]
+        };
+
+        var veg1 = {
+            "position": .4,
+            "rgb": [5, 108, 79]
+        };
+
+        var veg2 = {
+            "position": 0.72,
+            "rgb": [15, 190, 80]
+        };
+
+        var veg3 = {
+            "position": 1,
+            "rgb": [0, 255, 0]
+        };
+
+        var colorsVegetation = [veg0, veg1, veg2, veg3];
+
+        var ctxV = canvasVegetation.getContext('2d');
+        var imageDataVegetation = ctxV.getImageData(0, 0, canvasVegetation.width, canvasVegetation.height);
+        var dataVegetation = imageDataVegetation.data;
+
+        for (var xv = 0; xv < canvasVegetation.width; xv++) {
+            for (var yv = 0; yv < canvasVegetation.height; yv++) {
+                var pixPosition = (xv + yv * canvasVegetation.width) * 4;
+
+                var v = dataVegetation[pixPosition + 0] / 255;
+
+                if (v <= clipFloor) {
+                    v = clipFloor;
+                }
+                console.log(v)
+                var cv = colorDelta(v, colorsVegetation);
+
+                var r = dataVegetation[pixPosition + 0] = cv[0];
+                var g = dataVegetation[pixPosition + 1] = cv[1];
+                var b = dataVegetation[pixPosition + 2] = cv[2];
+                dataVegetation[pixPosition + 3] = 255;
+
+
+
+            }
+        }
+
+        ctxV.putImageData(imageDataVegetation, 0, 0);
+
+        var optionsDisplace = {
+            amplitude: 2,
+            frequency: .18,
+            octaves: 17,
+            persistence: .5
+        };
+
+        var canvasDisplace = document.getElementById('displace');
+        makeSphereSurface(canvasDisplace, optionsDisplace, .5, clipFloor);
+
+        var ctx = canvasDisplace.getContext('2d');
+        var imageData = ctx.getImageData(0, 0, canvasDisplace.width, canvasDisplace.height);
+        var data = imageData.data;
+
+        var canvasColor = document.getElementById('color');
+        var imageDataColor = ctx.getImageData(0, 0, canvasColor.width, canvasColor.height);
+        var dataBump = imageDataColor.data;
+        var ctx2 = canvasColor.getContext('2d');
+
+        for (var x1 = 0; x1 < canvasDisplace.width; x1++) {
+            for (var y1 = 0; y1 < canvasDisplace.height; y1++) {
+                var pixPosition = (x1 + y1 * canvasDisplace.width) * 4;
+
+                var v = dataBump[pixPosition + 0] / 255;
+                var c = colorDelta(v, colors);
+
+                var r = data[pixPosition + 0] = c[0];
+                var g = data[pixPosition + 1] = c[1];
+                var b = data[pixPosition + 2] = c[2];
+                data[pixPosition + 3] = 255;
+
+
+                if (v <= clipFloor) {
+                    v = clipFloor;
+                }
+
+                var r_elev = dataBump[pixPosition + 0] = v * 225;
+                var g_elev = dataBump[pixPosition + 1] = v * 225;
+                var b_elev = dataBump[pixPosition + 2] = v * 225;
+                dataBump[pixPosition + 3] = 255;
+
+            }
+        }
+
+        ctx2.putImageData(imageData, 0, 0);
+        ctx.putImageData(imageDataColor, 0, 0);
+
+
+        //StackBlur.canvasRGBA(canvasColor, 0, 0, canvasColor.width, canvasColor.height, 1);
+
+        var dataURL_bump = canvasDisplace.toDataURL();
+        var dataURL_color = canvasColor.toDataURL();
+
+
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+        camera.position.z = 5;
+
+        var renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        var material = new THREE.MeshStandardMaterial({
+            displacementScale: 0.2,
+            displacementBias: 1,
+            emissive: null,
+            metalness: 0.4,
+            roughness: 0.7
+        });
+
+        var geometry = new THREE.SphereGeometry(1, 1280, 720);
+        renderer.render(scene, camera);
+
+        //document.body.appendChild(renderer.domElement);
+        $('#world')[0].appendChild(renderer.domElement);
+        const directionalLight = new THREE.DirectionalLight(0xfdfeda, 1.5);
+        directionalLight.position.set(1500, 1000, -100);
+        scene.add(directionalLight);
+
+        const light = new THREE.AmbientLight(0xffffff);
+        scene.add(light);
+
+
+
+
+        //Load the texture
+        var loader_bump = new THREE.TextureLoader();
+        loader_bump.load(
+            dataURL_bump,
+            function(dataURL_bump) {
+                material.displacementMap = dataURL_bump;
+
+                var loader_color = new THREE.TextureLoader();
+
+                loader_color.load(
+                    dataURL_color,
+                    function(dataURL_color) {
+                        material.map = dataURL_color;
+                        //material.roughnessMap = dataURL_color;
+                        var sphere = new THREE.Mesh(geometry, material);
+                        scene.add(sphere);
+                        directionalLight.target = sphere;
+                        //.roughnessMap : Texture
+                        //The green channel of this texture is used to alter the roughness of the material.
+
+                        //.metalnessMap : dataURL_color;
+                        //The blue channel of this texture is used to alter the metalness of the material.
+
+                        //42,82,190,255
+
+                        const animate = function() {
+                            requestAnimationFrame(animate);
+                            sphere.rotation.y -= 0.005;
+                            //sphere.rotation.x += 0.01;
+                            renderer.render(scene, camera);
+                        };
+
+                        animate();
+
+                    },
+                    function(xhr) {
+                        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                    },
+
+                    function(xhr) {
+                        console.log('An error happened');
+                    }
+                );
+            },
+
+            function(xhr) {
+                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+
+            function(xhr) {
+                console.log('An error happened');
+            }
+        );
+    </script>
+
+</body>
+
+</html>

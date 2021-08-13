@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" integrity="sha512-5A8nwdMOWrSz20fDsjczgUidUBR8liPYU+WymTZP1lmY9G6Oc7HlZv156XqnsgNUzTyMefFTcsFH/tnJE/+xBg==" crossorigin="anonymous" />
+
+    <title>noise6</title>
+
+    <style>
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="row p-0 m-0 w-100">
+        <div class="col-8 p-0 m-0">
+            <div class="card p-0 m-0 w-100" id="3d">
+            </div>
+        </div>
+        <div class="col-4" style="position: relative;">
+            <div style="position: absolute; width: 100%;">
+                <div class="card">
+                    <div class="card-body">
+
+                        <label for="frequency" class="form-label mb-3">Frequency <span class="text-muted" id="valOffrequency"></span></label>
+                        <input type="range" class="form-range" id="frequency" min="1" max="100" value="15">
+
+                        <label for="persistence" class="form-label mb-3">Persistence <span class="text-muted" id="valOfpersistence"></span></label>
+                        <input type="range" class="form-range" id="persistence" min="1" max="100" value="75">
+
+                        <label for="octaves" class="form-label mb-3">Octaves <span class="text-muted" id="valOfoctaves"></span></label>
+                        <input type="range" class="form-range" id="octaves" min="1" max="16" value="10">
+
+                        <label for="amplitude" class="form-label mb-3">Amplitude <span class="text-muted" id="valOfamplitude"></span></label>
+                        <input type="range" class="form-range" id="amplitude" min="1" max="10" value="4">
+
+                        <hr>
+
+                        <label for="scale" class="form-label mb-3">Scale <span class="text-muted" id="valOfscale"></span></label>
+                        <input type="range" class="form-range" id="scale" min="1" max="100" value="45">
+
+                        <label for="bias" class="form-label mb-3">Bias <span class="text-muted" id="valOfbias"></span></label>
+                        <input type="range" class="form-range" id="bias" min="1" max="100" value="1">
+
+                        <hr>
+
+                        <label for="seaLevel" class="form-label mb-3">Sea Level <span class="text-muted" id="valOfseaLevel"></span></label>
+                        <input type="range" class="form-range" id="seaLevel" min="0" max="100" value="58">
+
+
+                        <button class="btn btn-primary" id="generate" type="button">Generate</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <input type="color" class="form-control p-0" id="color">
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <canvas id="canvas_displace" width="720" height="480" style="display: none;"></canvas>
+    <canvas id="canvas_color" width="720" height="480" style="display: none;"></canvas>
+    <canvas id="canvas_shiny" width="720" height="480" style="display: none"></canvas>
+    <canvas id="canvas_vegetation" width="720" height="480" style=""></canvas>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js" integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha512-dLxUelApnYxpLt6K2iomGngnHO83iUvZytA3YjDUCjT0HDOHKXnVYdf3hU4JjM8uEhxf9nD1/ey98U3t2vZ0qQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="/dnd/maps/js/orbit-controls.js"></script>
+
+    <script src="https://unpkg.com/simplex-noise@2.4.0/simplex-noise.js"></script>
+
+
+    <script>
+        for (let i = 0; i < 50; i++) {
+            var p = Math.abs(50 - (i - (50 / 2)))
+            console.log(p)
+        }
+
+        $('#color').change(function() {
+            var h = $(this).val().toString().replace(/\W/, '').match(/.{2}/g);
+            console.log(parseInt(h[0], 16), parseInt(h[1], 16), parseInt(h[2], 16))
+        });
+
+        var canvas_displace = document.getElementById('canvas_displace');
+        var canvas_color = document.getElementById('canvas_color');
+        var simplex = new SimplexNoise(.1);
+        var vegSimplex = new SimplexNoise(.7);
+
+        var frequency = $('#frequency').val() / 100;
+        var octaves = $('#octaves').val();
+        var amplitude = $('#amplitude').val() / 10;
+        var persistence = $('#persistence').val() / 100;
+        var scale = $('#scale').val() / 100;
+        var bias = $('#bias').val() / 100;
+        var seaLevel = $('#seaLevel').val() / 100;
+
+        $('#generate').click(function() {
+            //$(this).prop('disabled', true);
+            noise();
+        });
+
+        $('.card-body').on('input', 'input', function() {
+
+            frequency = $('#frequency').val() / 100;
+            octaves = $('#octaves').val();
+            amplitude = $('#amplitude').val() / 10;
+            persistence = $('#persistence').val() / 100;
+            scale = $('#scale').val() / 100;
+            bias = $('#bias').val() / 100;
+            seaLevel = $('#seaLevel').val() / 100;
+
+            $('#valOffrequency').html(frequency);
+            $('#valOfoctaves').html(octaves);
+            $('#valOfamplitude').html(amplitude);
+            $('#valOfpersistence').html(persistence);
+
+            $('#valOfscale').html(scale);
+            $('#valOfbias').html(bias);
+            $('#valOfseaLevel').html($('#seaLevel').val() + '%');
+
+        });
+
+        function noise(seed) {
+
+            const TWO_PI = 2 * Math.PI;
+
+            var ctx_vegetation = canvas_vegetation.getContext('2d');
+            ctx_vegetation.clearRect(0, 0, canvas_vegetation.width, canvas_vegetation.height);
+            var imageData_vegetation = ctx_vegetation.getImageData(0, 0, canvas_vegetation.width, canvas_vegetation.height);
+            var data_vegetation = imageData_vegetation.data;
+
+            var vegOctaves = 12;
+            var vegAmplitude = 0.9;
+            var vegFrequency = 0.5;
+            var vegPersistence = .8;
+            for (let x = 0; x < canvas_vegetation.width; x++) {
+                for (let y = 0; y < canvas_vegetation.height; y++) {
+                    let value = 0.0;
+                    for (let octave = 0; octave < vegOctaves; octave++) {
+                        const freq = vegFrequency * Math.pow(2, octave);
+                        const [nx, ny] = [x / canvas_vegetation.width, y / canvas_vegetation.height];
+                        const [rdx, rdy] = [nx * TWO_PI, ny * Math.PI];
+                        const sinY = Math.sin(rdy + Math.PI);
+                        const a = TWO_PI * Math.sin(rdx) * sinY;
+                        const b = TWO_PI * Math.cos(rdx) * sinY;
+                        const d = TWO_PI * Math.cos(rdy);
+                        value += vegSimplex.noise3D(a * freq, b * freq, d * freq) * (vegAmplitude * Math.pow(vegPersistence, octave));
+                    }
+
+                    var vPixPosition = (x + y * canvas_vegetation.width) * 4;
+                    var v = (value / (2 - 1 / Math.pow(2, octaves - 1)) * 128) + 128;
+
+                    var halfCanv = canvas_vegetation.height / 2;
+
+                    var equatorialFalloff = ((halfCanv - Math.abs(y - (halfCanv))) / halfCanv) * 255;
+                    var equatorialFalloff2 = halfCanv - Math.abs(Math.SQRT1_2 * (y - halfCanv));
+
+                    var hc_ = Math.round(Math.abs(y - halfCanv))
+
+                    if (y % 15 == 9 && x == 200) {
+                        /*
+
+                        console.log(Math.round(equatorialFalloff));
+                        console.log(Math.round(equatorialFalloff2));
+                        console.log(Math.round(halfCanv - hc_));
+                        console.log(Math.round(Math.cbrt(halfCanv - hc_)));
+                        console.log('\n\n');
+                        */
+                    }
+
+                    data_vegetation[vPixPosition + 0] = 0;
+                    //data_vegetation[vPixPosition + 1] = halfCanv - hc_;
+                    data_vegetation[vPixPosition + 1] = Math.cbrt(hc_);
+                    data_vegetation[vPixPosition + 2] = 0;
+                    data_vegetation[vPixPosition + 3] = 255;
+
+                }
+            }
+
+            ctx_vegetation.putImageData(imageData_vegetation, 0, 0);
+
+
+
+
+
+            var ctx_displace = canvas_displace.getContext('2d');
+            ctx_displace.clearRect(0, 0, canvas_displace.width, canvas_displace.height);
+            var imageData_displace = ctx_displace.getImageData(0, 0, canvas_displace.width, canvas_displace.height);
+            var data_displace = imageData_displace.data;
+
+            var ctx_color = canvas_color.getContext('2d');
+            ctx_color.clearRect(0, 0, canvas_color.width, canvas_color.height);
+            var imageData_color = ctx_color.getImageData(0, 0, canvas_color.width, canvas_color.height);
+            var data_color = imageData_color.data;
+
+            var ctx_shiny = canvas_shiny.getContext('2d');
+            ctx_shiny.clearRect(0, 0, canvas_shiny.width, canvas_shiny.height);
+            var imageData_shiny = ctx_shiny.getImageData(0, 0, canvas_shiny.width, canvas_shiny.height);
+            var data_shiny = imageData_shiny.data;
+
+
+            frequency = $('#frequency').val() / 100;
+            octaves = $('#octaves').val();
+            amplitude = $('#amplitude').val() / 10;
+            persistence = $('#persistence').val() / 100;
+            seaLevel = $('#seaLevel').val() / 100;
+            $('#valOffrequency').html(frequency);
+            $('#valOfoctaves').html(octaves);
+            $('#valOfamplitude').html(amplitude);
+            $('#valOfpersistence').html(persistence);
+            $('#valOfseaLevel').html($('#seaLevel').val() + '%');
+
+
+            var start = {
+                "position": 0,
+                "rgb": [0, 20, 70]
+            };
+
+            var mid = {
+                "position": seaLevel,
+                "rgb": [5, 70, 108]
+            };
+
+            var mid2 = {
+                "position": seaLevel + 0.02,
+                "rgb": [159, 152, 122]
+            };
+
+            var mid3 = {
+                "position": 1,
+                "rgb": [86, 57, 60]
+            };
+
+            var colors = [start, mid, mid2, mid3];
+
+            for (let x = 0; x < canvas_displace.width; x++) {
+                for (let y = 0; y < canvas_displace.height; y++) {
+                    let value = 0.0;
+                    for (let octave = 0; octave < octaves; octave++) {
+                        const freq = frequency * Math.pow(2, octave);
+                        const [nx, ny] = [x / canvas_displace.width, y / canvas_displace.height];
+                        const [rdx, rdy] = [nx * TWO_PI, ny * Math.PI];
+                        const sinY = Math.sin(rdy + Math.PI);
+                        const a = TWO_PI * Math.sin(rdx) * sinY;
+                        const b = TWO_PI * Math.cos(rdx) * sinY;
+                        const d = TWO_PI * Math.cos(rdy);
+                        value += simplex.noise3D(a * freq, b * freq, d * freq) * (amplitude * Math.pow(persistence, octave));
+                    }
+
+                    var pixPosition = (x + y * canvas_displace.width) * 4;
+                    var v = (value / (2 - 1 / Math.pow(2, octaves - 1)) * 128) + 128;
+
+                    //console.log(v);
+
+                    var c = colorDelta(v / 225, colors);
+                    if (x == 50) {
+                        //console.log(v)
+                        //console.log(c)
+                    }
+                    if (v / 255 <= seaLevel) {
+                        v = seaLevel * 255;
+                    };
+
+                    data_displace[pixPosition + 0] = v;
+                    data_displace[pixPosition + 1] = v;
+                    data_displace[pixPosition + 2] = v;
+                    data_displace[pixPosition + 3] = 255;
+
+                    data_color[pixPosition + 0] = c[0];
+                    data_color[pixPosition + 1] = c[1];
+                    data_color[pixPosition + 2] = c[2];
+                    data_color[pixPosition + 3] = 255;
+
+                    data_shiny[pixPosition + 0] = 0;
+                    data_shiny[pixPosition + 1] = c[1] + 100;
+                    data_shiny[pixPosition + 2] = c[2] + 50;
+                    data_shiny[pixPosition + 3] = 255;
+
+                }
+            }
+
+
+
+
+            ctx_displace.putImageData(imageData_displace, 0, 0);
+            ctx_color.putImageData(imageData_color, 0, 0);
+            ctx_shiny.putImageData(imageData_shiny, 0, 0);
+
+
+            var dataURL_displace = canvas_displace.toDataURL();
+
+            var loader_displace = new THREE.TextureLoader();
+
+            loader_displace.load(
+                dataURL_displace,
+
+                function(dataURL_displace) {
+                    dataURL_displace.needsUpdate = true;
+                    material.needsUpdate = true
+                    material.map = dataURL_displace;
+                    material.displacementMap = dataURL_displace;
+                    material.displacementScale = scale;
+                    material.displacementBias = bias;
+                },
+
+                undefined,
+
+                function(err) {
+                    console.error('An error happened.');
+                }
+            );
+
+            var loader_color = new THREE.TextureLoader();
+
+            var dataURL_color = canvas_color.toDataURL();
+            loader_color.load(
+                dataURL_color,
+
+                function(dataURL_color) {
+
+                    dataURL_color.needsUpdate = true;
+                    material.needsUpdate = true
+                    material.map = dataURL_color;
+                },
+
+                undefined,
+
+                function(err) {
+                    console.error('An error happened.');
+                }
+            );
+
+            var loader_shiny = new THREE.TextureLoader();
+
+            var dataURL_shiny = canvas_shiny.toDataURL();
+            loader_shiny.load(
+                dataURL_shiny,
+
+                function(dataURL_shiny) {
+
+                    dataURL_shiny.needsUpdate = true;
+                    material.needsUpdate = true
+                        //blue channel
+                    material.metalnessMap
+                    material.metalness = .3;
+                    //green channel
+                    material.roughnessMap
+                    material.roughness = .7
+                },
+
+                undefined,
+
+                function(err) {
+                    console.error('An error happened.');
+                }
+            );
+
+
+
+
+
+        }
+
+        var material = new THREE.MeshStandardMaterial();
+        const loader = new THREE.AnimationLoader();
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(24, window.innerWidth / window.innerHeight, 1, 1000);
+        camera.position.z = 10;
+        var renderer = new THREE.WebGLRenderer();
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.minDistance = 2.4;
+        controls.maxDistance = 20;
+        controls.enableDamping = true;
+        controls.dampingFactor = .6;
+        controls.update();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        var geometry = new THREE.SphereGeometry(1, canvas_displace.width, canvas_displace.height);
+        var sphere = new THREE.Mesh(geometry, material);
+        scene.add(sphere);
+
+        const animate = function() {
+            controls.update();
+            requestAnimationFrame(animate);
+
+            sphere.rotation.y -= 0.001;
+            //sphere.rotation.x += 0.01;
+
+            renderer.render(scene, camera);
+        };
+
+        animate();
+        //Render the scene
+        renderer.render(scene, camera);
+        $('#3d')[0].appendChild(renderer.domElement);
+
+        const directionalLight = new THREE.DirectionalLight(0xfdfeda, 1.5);
+        directionalLight.position.set(1500, 1000, -100);
+        scene.add(directionalLight);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff);
+        scene.add(ambientLight);
+
+        noise();
+
+        function colorDelta(percent, colorArray) {
+            colorArray = colorArray.sort((a, b) => a.position - b.position);
+
+            var prevColor = colorArray[colorArray.filter(x => x.position <= percent).length - 1];
+            var nextColor = colorArray[colorArray.filter(x => x.position <= percent).length];
+
+
+            if (!nextColor) {
+                nextColor = colorArray[colorArray.length - 1];
+            }
+
+            //var btwn = (percent - prevColor.position) / (nextColor.position - prevColor.position);
+
+
+            var normalizedNext = (nextColor.position - prevColor.position) * 100;
+            var normalizedPosition = (percent - prevColor.position) * 100;
+
+            var midPercentage = normalizedPosition / normalizedNext;
+
+
+            var RcolorDiff = (nextColor.rgb[0] - prevColor.rgb[0]) * midPercentage;
+            var newR = Math.round(prevColor.rgb[0] + RcolorDiff);
+
+            var GcolorDiff = (nextColor.rgb[1] - prevColor.rgb[1]) * midPercentage;
+            var newG = Math.round(prevColor.rgb[1] + GcolorDiff);
+
+            var BcolorDiff = (nextColor.rgb[2] - prevColor.rgb[2]) * midPercentage;
+            var newB = Math.round(prevColor.rgb[2] + BcolorDiff);
+
+            if (isNaN(newR)) {
+                newR = colorArray[colorArray.length - 1].rgb[0];
+            }
+
+            if (isNaN(newG)) {
+                newG = colorArray[colorArray.length - 1].rgb[1];
+            }
+
+            if (isNaN(newB)) {
+                newB = colorArray[colorArray.length - 1].rgb[2];
+            }
+            return [newR, newG, newB];
+        }
+    </script>
+
+</body>
+
+</html>
