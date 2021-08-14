@@ -10,19 +10,20 @@ var canvas_albedo = document.getElementById('canvas_albedo');
 
 
 
-$('.card-body').on('input', 'input', function() {
+$('.offcanvas-body').on('input', 'input', function() {
 
     permutation = $('#permutation').val();
-    frequency = $('#frequency').val() / 100;
+    frequency = $('#frequency').val() / 200;
     octaves = $('#octaves').val();
     amplitude = $('#amplitude').val() / 10;
     persistence = $('#persistence').val() / 100;
+    //A multiplier that determines how quickly the amplitudes diminish for each successive octave 
     scale = $('#scale').val() / 100;
     bias = $('#bias').val() / 100;
     seaLevel = $('#seaLevel').val() / 100;
 
     $('#valOfpermutation').html(permutation);
-    $('#valOffrequency').html(frequency);
+    $('#valOffrequency').html(frequency * 2);
     $('#valOfoctaves').html(octaves);
     $('#valOfamplitude').html(amplitude);
     $('#valOfpersistence').html(persistence);
@@ -33,14 +34,20 @@ $('.card-body').on('input', 'input', function() {
 });
 
 function noise(seed) {
-    console.log(octaves)
-    frequency = $('#frequency').val() / 100;
+
+    frequency = $('#frequency').val() / 200;
     octaves = $('#octaves').val();
     amplitude = $('#amplitude').val() / 10;
     persistence = $('#persistence').val() / 100;
     scale = $('#scale').val() / 100;
     bias = $('#bias').val() / 100;
     seaLevel = $('#seaLevel').val() / 100;
+
+    $('#valOffrequency').html(frequency * 2);
+    $('#valOfoctaves').html(octaves);
+    $('#valOfamplitude').html(amplitude);
+    $('#valOfpersistence').html(persistence);
+    $('#valOfseaLevel').html($('#seaLevel').val() + '%');
 
 
     var start = {
@@ -64,7 +71,6 @@ function noise(seed) {
     };
 
     var colors = [start, mid, mid2, mid3];
-
     var simplex = new SimplexNoise(seed);
 
     const TWO_PI = 2 * Math.PI;
@@ -74,10 +80,10 @@ function noise(seed) {
     var imageData_vegetation = ctx_vegetation.getImageData(0, 0, canvas_vegetation.width, canvas_vegetation.height);
     var data_vegetation = imageData_vegetation.data;
 
-    var vegOctaves = octaves;
-    var vegAmplitude = amplitude;
-    var vegFrequency = frequency;
-    var vegPersistence = persistence;
+    var vegOctaves = 2;
+    var vegAmplitude = .9;
+    var vegFrequency = .2;
+    var vegPersistence = .6;
     for (let x = 0; x < canvas_vegetation.width; x++) {
         for (let y = 0; y < canvas_vegetation.height; y++) {
             let value = 0.0;
@@ -103,22 +109,20 @@ function noise(seed) {
             var equatorialFalloff = ((halfCanv - Math.abs(y - (halfCanv))) / halfCanv) * v;
             var vegFalloff = Math.abs(y - halfCanv) / (halfCanv / 2);
 
+            //equatorialFalloff * vegFalloff
 
-
-            data_vegetation[vPixPosition + 0] = equatorialFalloff * vegFalloff;
-            data_vegetation[vPixPosition + 1] = equatorialFalloff;
+            if (v / 255 <= seaLevel) {
+                //v = seaLevel * 255;
+            };
+            data_vegetation[vPixPosition + 0] = v;
+            data_vegetation[vPixPosition + 1] = v;
             //data_vegetation[vPixPosition + 0] = v;
             //data_vegetation[vPixPosition + 1] = v / 2;
             data_vegetation[vPixPosition + 2] = 0;
-            data_vegetation[vPixPosition + 3] = equatorialFalloff;
+            data_vegetation[vPixPosition + 3] = 255;
 
         }
     }
-
-
-
-
-
 
     var ctx_displace = canvas_displace.getContext('2d');
     ctx_displace.clearRect(0, 0, canvas_displace.width, canvas_displace.height);
@@ -135,19 +139,6 @@ function noise(seed) {
     var imageData_reflective = ctx_reflective.getImageData(0, 0, canvas_reflective.width, canvas_reflective.height);
     var data_reflective = imageData_reflective.data;
 
-
-    frequency = $('#frequency').val() / 100;
-    octaves = $('#octaves').val();
-    amplitude = $('#amplitude').val() / 10;
-    persistence = $('#persistence').val() / 100;
-    seaLevel = $('#seaLevel').val() / 100;
-    $('#valOffrequency').html(frequency);
-    $('#valOfoctaves').html(octaves);
-    $('#valOfamplitude').html(amplitude);
-    $('#valOfpersistence').html(persistence);
-    $('#valOfseaLevel').html($('#seaLevel').val() + '%');
-
-
     for (let x = 0; x < canvas_displace.width; x++) {
         for (let y = 0; y < canvas_displace.height; y++) {
             let value = 0.0;
@@ -161,21 +152,22 @@ function noise(seed) {
                 const d = TWO_PI * Math.cos(rdy);
                 value += simplex.noise3D(a * freq, b * freq, d * freq) * (amplitude * Math.pow(persistence, octave));
             }
-
+            var surfaceVal = value / (2 - 1 / Math.pow(2, octaves - 1));
             var pixPosition = (x + y * canvas_displace.width) * 4;
-            var v = (value / (2 - 1 / Math.pow(2, octaves - 1)) * 128) + 128;
+            var v = (surfaceVal * 128) + 128;
 
-            var halfCanv = data_albedo.height / 2;
-            var equatorialFalloff = ((halfCanv - Math.abs(y - (halfCanv))) / halfCanv) * v;
+            //var halfCanv = data_albedo.height / 2;
+            //var equatorialFalloff = ((halfCanv - Math.abs(y - (halfCanv))) / halfCanv) * v;
 
 
+            if (v < 0) {
+                v = 0;
+            };
 
             var c = colorDelta(v / 225, colors);
 
-
             if (v / 255 <= seaLevel) {
                 v = seaLevel * 255;
-                data_vegetation[pixPosition + 3] = v
             };
 
             data_displace[pixPosition + 0] = v;
@@ -189,8 +181,8 @@ function noise(seed) {
             data_albedo[pixPosition + 3] = 255;
 
             data_reflective[pixPosition + 0] = 0;
-            data_reflective[pixPosition + 1] = c[1];
-            data_reflective[pixPosition + 2] = c[2];
+            //data_reflective[pixPosition + 1] = c[1];
+            //data_reflective[pixPosition + 2] = c[2];
             data_reflective[pixPosition + 3] = 255;
 
 
@@ -200,11 +192,11 @@ function noise(seed) {
 
 
 
-
     ctx_displace.putImageData(imageData_displace, 0, 0);
     ctx_albedo.putImageData(imageData_albedo, 0, 0);
     ctx_reflective.putImageData(imageData_reflective, 0, 0);
     ctx_vegetation.putImageData(imageData_vegetation, 0, 0);
+
 
     var dataURL_displace = canvas_displace.toDataURL();
     var dataURL_albedo = canvas_albedo.toDataURL();
@@ -231,7 +223,13 @@ function colorDelta(percent, colorArray) {
 
     //var btwn = (percent - prevColor.position) / (nextColor.position - prevColor.position);
 
-
+    if (!nextColor || !nextColor.position) {
+        console.log('')
+        console.log(prevColor)
+        console.log(percent)
+        console.log(persistence)
+        console.log(colorArray[colorArray.length - 1])
+    }
     var normalizedNext = (nextColor.position - prevColor.position) * 100;
     var normalizedPosition = (percent - prevColor.position) * 100;
 
