@@ -8,8 +8,6 @@ var canvas_albedo = document.getElementById('canvas_albedo');
 
 
 
-
-
 $('.offcanvas-body').on('input', 'input', function() {
 
     permutation = $('#permutation').val();
@@ -33,7 +31,10 @@ $('.offcanvas-body').on('input', 'input', function() {
 
 });
 
+
 function noise(seed) {
+    var pp = true;
+
 
     frequency = $('#frequency').val() / 200;
     octaves = $('#octaves').val();
@@ -73,17 +74,35 @@ function noise(seed) {
     var colors = [start, mid, mid2, mid3];
     var simplex = new SimplexNoise(seed);
 
+    colors.map(function(x) {
+        var hex = '#' + ((1 << 24) + (x.rgb[0] << 16) + (x.rgb[1] << 8) + (x.rgb[2])).toString(16);
+    });
+
     const TWO_PI = 2 * Math.PI;
 
     var ctx_vegetation = canvas_vegetation.getContext('2d');
     ctx_vegetation.clearRect(0, 0, canvas_vegetation.width, canvas_vegetation.height);
     var imageData_vegetation = ctx_vegetation.getImageData(0, 0, canvas_vegetation.width, canvas_vegetation.height);
     var data_vegetation = imageData_vegetation.data;
+    /*
+        var vegOctaves = 9;
+        var vegAmplitude = .3;
+        var vegFrequency = .7;
+        var vegPersistence = .9;
 
-    var vegOctaves = 2;
-    var vegAmplitude = .9;
-    var vegFrequency = .2;
-    var vegPersistence = .6;
+        var vegOctaves = octaves;
+        var vegAmplitude = amplitude;
+        var vegFrequency = frequency;
+        var vegPersistence = persistence;
+    */
+
+    var vegSimplex = new SimplexNoise(seed + 8);
+    var vegOctaves = 9;
+    var vegAmplitude = .38;
+    var vegAmplitude = 2;
+    var vegFrequency = .1;
+    var vegPersistence = .9;
+
     for (let x = 0; x < canvas_vegetation.width; x++) {
         for (let y = 0; y < canvas_vegetation.height; y++) {
             let value = 0.0;
@@ -95,12 +114,21 @@ function noise(seed) {
                 const a = TWO_PI * Math.sin(rdx) * sinY;
                 const b = TWO_PI * Math.cos(rdx) * sinY;
                 const d = TWO_PI * Math.cos(rdy);
-                value += simplex.noise3D(a * freq, b * freq, d * freq) * (vegAmplitude * Math.pow(vegPersistence, octave));
+                value += vegSimplex.noise3D(a * freq, b * freq, d * freq) * (vegAmplitude * Math.pow(vegPersistence, octave));
             }
 
             if (v / 255 <= seaLevel) {
                 v = seaLevel * 255;
             };
+
+
+            if (v / 255 < (seaLevel - 0.06)) {
+                //data_vegetation[pixPosition + 0] = 0;
+                //data_vegetation[pixPosition + 1] = 0;
+                //data_vegetation[pixPosition + 2] = 0;
+                data_vegetation[pixPosition + 3] = 0;
+            };
+
             var vPixPosition = (x + y * canvas_vegetation.width) * 4;
             var v = (value / (2 - 1 / Math.pow(2, octaves - 1)) * 128) + 128;
 
@@ -109,17 +137,10 @@ function noise(seed) {
             var equatorialFalloff = ((halfCanv - Math.abs(y - (halfCanv))) / halfCanv) * v;
             var vegFalloff = Math.abs(y - halfCanv) / (halfCanv / 2);
 
-            //equatorialFalloff * vegFalloff
-
-            if (v / 255 <= seaLevel) {
-                //v = seaLevel * 255;
-            };
-            data_vegetation[vPixPosition + 0] = v;
-            data_vegetation[vPixPosition + 1] = v;
-            //data_vegetation[vPixPosition + 0] = v;
-            //data_vegetation[vPixPosition + 1] = v / 2;
-            data_vegetation[vPixPosition + 2] = 0;
-            data_vegetation[vPixPosition + 3] = 255;
+            data_vegetation[vPixPosition + 0] = equatorialFalloff * vegFalloff;
+            data_vegetation[vPixPosition + 1] = equatorialFalloff * .8;
+            data_vegetation[vPixPosition + 2] = equatorialFalloff * .2;
+            data_vegetation[vPixPosition + 3] = equatorialFalloff * 8;
 
         }
     }
@@ -138,6 +159,21 @@ function noise(seed) {
     ctx_reflective.clearRect(0, 0, canvas_reflective.width, canvas_reflective.height);
     var imageData_reflective = ctx_reflective.getImageData(0, 0, canvas_reflective.width, canvas_reflective.height);
     var data_reflective = imageData_reflective.data;
+
+    var canvas_drawing = document.getElementById('canvas_drawing');
+    var ctx_drawing = canvas_drawing.getContext('2d');
+    ctx_drawing.clearRect(0, 0, canvas_drawing.width, canvas_drawing.height);
+    var imageData_drawing = ctx_drawing.getImageData(0, 0, canvas_drawing.width, canvas_drawing.height);
+    var data_drawing = imageData_drawing.data;
+
+    /*
+    var manager = new THREE.LoadingManager();
+    manager.onProgress = function(item, loaded, total) {
+        console.log(loaded / total * 100) + '%';
+    };
+
+    new THREE.ImageLoader(manager).load('http://placehold.it/' + r + 'x' + r);
+    */
 
     for (let x = 0; x < canvas_displace.width; x++) {
         for (let y = 0; y < canvas_displace.height; y++) {
@@ -166,9 +202,24 @@ function noise(seed) {
 
             var c = colorDelta(v / 225, colors);
 
+
+            if (v / 255 < (seaLevel - 0.06)) {
+                //data_vegetation[pixPosition + 0] = 0;
+                //data_vegetation[pixPosition + 1] = 0;
+                //data_vegetation[pixPosition + 2] = 0;
+                //data_vegetation[pixPosition + 3] = 0;
+            };
+
             if (v / 255 <= seaLevel) {
                 v = seaLevel * 255;
-            };
+
+            }
+
+
+            //data_drawing[pixPosition + 0] = v;
+            //data_drawing[pixPosition + 1] = v;
+            //data_drawing[pixPosition + 2] = v;
+            //data_drawing[pixPosition + 3] = 255;
 
             data_displace[pixPosition + 0] = v;
             data_displace[pixPosition + 1] = v;
@@ -179,10 +230,25 @@ function noise(seed) {
             data_albedo[pixPosition + 1] = c[1];
             data_albedo[pixPosition + 2] = c[2];
             data_albedo[pixPosition + 3] = 255;
+            //console.log(data_vegetation[pixPosition + 3]);
+
+
+            /*
+            
+            data_albedo[pixPosition + 0] = data_vegetation[pixPosition + 0];
+            data_albedo[pixPosition + 1] = data_vegetation[pixPosition + 1];
+            data_albedo[pixPosition + 2] = data_vegetation[pixPosition + 2];
+            data_albedo[pixPosition + 3] = 255;
+
+            data_albedo[pixPosition + 0] = c[0];
+            data_albedo[pixPosition + 1] = c[1];
+            data_albedo[pixPosition + 2] = c[2];
+            data_albedo[pixPosition + 3] = 255;
+            */
 
             data_reflective[pixPosition + 0] = 0;
-            //data_reflective[pixPosition + 1] = c[1];
-            //data_reflective[pixPosition + 2] = c[2];
+            data_reflective[pixPosition + 1] = c[1];
+            data_reflective[pixPosition + 2] = c[2];
             data_reflective[pixPosition + 3] = 255;
 
 
@@ -196,21 +262,29 @@ function noise(seed) {
     ctx_albedo.putImageData(imageData_albedo, 0, 0);
     ctx_reflective.putImageData(imageData_reflective, 0, 0);
     ctx_vegetation.putImageData(imageData_vegetation, 0, 0);
+    ctx_drawing.putImageData(imageData_drawing, 0, 0);
 
 
+    $('#spinnerParent').addClass('d-none');
     var dataURL_displace = canvas_displace.toDataURL();
     var dataURL_albedo = canvas_albedo.toDataURL();
     var dataURL_reflective = canvas_reflective.toDataURL();
     var dataURL_vegetation = canvas_vegetation.toDataURL();
+    var dataURL_drawing = canvas_drawing.toDataURL();
 
-
+    var canvas_landscape = document.getElementById('canvas_landscape');
+    var ctx_landscape = canvas_landscape.getContext("2d");
+    ctx_landscape.drawImage(canvas_albedo, 0, 0);
+    ctx_landscape.globalCompositeOperation = 'source-over';
+    ctx_landscape.drawImage(canvas_vegetation, 0, 0);
     //ctx_albedo.globalCompositeOperation = "overlay";
     //ctx_albedo.drawImage(canvas_vegetation, 0, 0);
+    //$('#spinnerParent').removeClass('d-none');
 }
 
 
 
-function colorDelta(percent, colorArray) {
+function colorDelta(percent, colorArray, vegPixel, vegAlpha) {
     colorArray = colorArray.sort((a, b) => a.position - b.position);
 
     var prevColor = colorArray[colorArray.filter(x => x.position <= percent).length - 1];
@@ -221,15 +295,6 @@ function colorDelta(percent, colorArray) {
         nextColor = colorArray[colorArray.length - 1];
     }
 
-    //var btwn = (percent - prevColor.position) / (nextColor.position - prevColor.position);
-
-    if (!nextColor || !nextColor.position) {
-        console.log('')
-        console.log(prevColor)
-        console.log(percent)
-        console.log(persistence)
-        console.log(colorArray[colorArray.length - 1])
-    }
     var normalizedNext = (nextColor.position - prevColor.position) * 100;
     var normalizedPosition = (percent - prevColor.position) * 100;
 
