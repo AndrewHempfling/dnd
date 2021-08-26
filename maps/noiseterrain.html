@@ -21,7 +21,7 @@
 
     <canvas id="c" height="480" width="720"></canvas>
 
-    <canvas style="background-color: #000000;" id="vegc" height="480" width="720"></canvas>
+    <canvas style="background-color: #000000;" id="canvas_vegetation" height="480" width="720"></canvas>
     <canvas id="composite" height="480" width="720"></canvas>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
@@ -45,13 +45,13 @@
         var data = imageData.data;
         var simplex = new SimplexNoise(1);
 
-        var vegc = document.getElementById('vegc');
-        var vegctx = vegc.getContext('2d');
-        vegctx.clearRect(0, 0, vegc.width, vegc.height);
-        var vegcimageData = vegctx.getImageData(0, 0, vegc.width, vegc.height);
-        var vegcdata = vegcimageData.data;
+        var canvas_vegetation = document.getElementById('canvas_vegetation');
+        var canvas_vegetationtx = canvas_vegetation.getContext('2d');
+        canvas_vegetationtx.clearRect(0, 0, canvas_vegetation.width, canvas_vegetation.height);
+        var canvas_vegetationimageData = canvas_vegetationtx.getImageData(0, 0, canvas_vegetation.width, canvas_vegetation.height);
+        var canvas_vegetationdata = canvas_vegetationimageData.data;
         var vegsimplex = new SimplexNoise(1);
-        var noVegCoords = [];
+        var nocanvas_vegetationoords = [];
         const TWO_PI = 2 * Math.PI;
 
 
@@ -100,12 +100,12 @@
         var treeTop = 255 * treelineCeil;
         var treeRange = treeTop - treeBottom;
 
-        for (let x = 0; x < vegc.width; x++) {
-            for (let y = 0; y < vegc.height; y++) {
+        for (let x = 0; x < canvas_vegetation.width; x++) {
+            for (let y = 0; y < canvas_vegetation.height; y++) {
                 let value = 0.0;
                 for (let octave = 0; octave < vegoctaves; octave++) {
                     const freq = vegfrequency * Math.pow(2, octave);
-                    const [nx, ny] = [x / vegc.width, y / vegc.height];
+                    const [nx, ny] = [x / canvas_vegetation.width, y / canvas_vegetation.height];
                     const [rdx, rdy] = [nx * TWO_PI, ny * Math.PI];
                     const sinY = Math.sin(rdy + Math.PI);
                     const a = TWO_PI * Math.sin(rdx) * sinY;
@@ -131,10 +131,10 @@
                     v = 0;
                 };
 
-                vegcdata[(x + y * vegc.width) * 4 + 0] = 0;
-                vegcdata[(x + y * vegc.width) * 4 + 1] = v;
-                vegcdata[(x + y * vegc.width) * 4 + 2] = 0;
-                vegcdata[(x + y * vegc.width) * 4 + 3] = v;
+                canvas_vegetationdata[(x + y * canvas_vegetation.width) * 4 + 0] = 0;
+                canvas_vegetationdata[(x + y * canvas_vegetation.width) * 4 + 1] = v;
+                canvas_vegetationdata[(x + y * canvas_vegetation.width) * 4 + 2] = 0;
+                canvas_vegetationdata[(x + y * canvas_vegetation.width) * 4 + 3] = v;
             }
         }
 
@@ -147,8 +147,8 @@
 
         ctx.putImageData(imageData, 0, 0);
         ctx.globalCompositeOperation = 'source-atop';
-        vegctx.putImageData(vegcimageData, 0, 0);
-        ctx.drawImage(vegc, 0, 0);
+        canvas_vegetationtx.putImageData(canvas_vegetationimageData, 0, 0);
+        ctx.drawImage(canvas_vegetation, 0, 0);
 
         var dataURL = c.toDataURL();
 
