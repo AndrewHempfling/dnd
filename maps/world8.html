@@ -143,13 +143,13 @@
     </div>
 
     <div class="modal fade" id="mapDrawingModal" tabindex="-1" aria-labelledby="mapDrawingModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-fullscreen-md-down">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="mapDrawingModalLabel">Map</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body" id="mapDrawingBody">
+                <div class="modal-body p-0" id="mapDrawingBody">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -277,7 +277,7 @@
                 function(dataURL_landscape) {
 
                     //mapDrawingBody
-                    $('#mapDrawingBody').html($(dataURL_landscape.image).addClass('img-fluid'));
+                    $('#mapDrawingBody').html($(dataURL_landscape.image).addClass('img-fluid w-100'));
                     //$('#offcanvasmapDrawing').height($(dataURL_albedo.image).height())
                     //$('#mapDrawing').attr('src', dataURL_albedo);
                     dataURL_landscape.needsUpdate = true;
