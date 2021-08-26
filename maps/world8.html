@@ -152,6 +152,7 @@
                 <div class="modal-body p-0" id="mapDrawingBody">
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary float-start" id="zoomtst">zoom</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary">Save changes</button>
                 </div>
@@ -165,7 +166,7 @@
     <canvas id="canvas_albedo" width="720" height="480" style="display: none"></canvas>
     <canvas id="canvas_vegetation" width="720" height="480" style="display: none"></canvas>
     <canvas id="composite" height="480" width="720" style="display: none"></canvas>
-    <canvas id="canvas_landscape" width="720" height="480" style="display: none"></canvas>
+    <canvas id="canvas_landscape" width="720" height="480" style="display: none;"></canvas>
     <canvas id="canvas_drawing" width="720" height="480" style="display: none;"></canvas>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
@@ -275,14 +276,31 @@
                 dataURL_landscape,
 
                 function(dataURL_landscape) {
-
+                    var landscapeImg = dataURL_landscape.image;
                     //mapDrawingBody
-                    $('#mapDrawingBody').html($(dataURL_landscape.image).addClass('img-fluid w-100'));
+                    $('#mapDrawingBody').html($(landscapeImg).addClass('img-fluid'));
                     //$('#offcanvasmapDrawing').height($(dataURL_albedo.image).height())
                     //$('#mapDrawing').attr('src', dataURL_albedo);
                     dataURL_landscape.needsUpdate = true;
                     material.needsUpdate = true
                     material.map = dataURL_landscape;
+
+                    $('#zoomtst').on('click', function() {
+                        var img = new Image;
+                        img.src = canvas_landscape.toDataURL();
+
+                        var context = canvas_landscape.getContext('2d');
+                        var originalHeight = canvas_landscape.height;
+                        var originalWidth = canvas_landscape.width;
+
+                        img.onload = function() {
+                            //context.clearRect(0, 0, canvas_landscape.width, canvas_landscape.height);
+                            context.drawImage(img, -300, -300, 7200, 4800);
+                            $('#mapDrawingBody').html($(img).addClass('img-fluid'));
+                        };
+
+
+                    });
                 },
 
                 undefined,
