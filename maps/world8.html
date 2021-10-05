@@ -149,8 +149,8 @@
                     <h5 class="modal-title" id="mapDrawingModalLabel">Map</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-0" id="mapDrawingBody">
-                </div>
+
+                <canvas id="canvas_landscape" width="720" height="480"></canvas>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary float-start" id="zoomtst">zoom</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -166,7 +166,6 @@
     <canvas id="canvas_albedo" width="720" height="480" style="display: none"></canvas>
     <canvas id="canvas_vegetation" width="720" height="480" style="display: none"></canvas>
     <canvas id="composite" height="480" width="720" style="display: none"></canvas>
-    <canvas id="canvas_landscape" width="720" height="480" style="display: none;"></canvas>
     <canvas id="canvas_drawing" width="720" height="480" style="display: none;"></canvas>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
@@ -244,7 +243,7 @@
         scene.add(ambientLight);
 
         function loadMaterials() {
-
+            var canvas_landscape = document.getElementById('canvas_landscape');
             var dataURL_displace = canvas_displace.toDataURL();
 
             var loader_displace = new THREE.TextureLoader();
@@ -278,13 +277,28 @@
                 function(dataURL_landscape) {
                     var landscapeImg = dataURL_landscape.image;
                     //mapDrawingBody
-                    $('#mapDrawingBody').html($(landscapeImg).addClass('img-fluid'));
+                    //$('#mapDrawingBody').html($(landscapeImg).addClass('img-fluid').attr('id', 'mapImg'));
                     //$('#offcanvasmapDrawing').height($(dataURL_albedo.image).height())
                     //$('#mapDrawing').attr('src', dataURL_albedo);
                     dataURL_landscape.needsUpdate = true;
                     material.needsUpdate = true
                     material.map = dataURL_landscape;
+                    var originalLandscape = canvas_landscape;
 
+                    $('#canvas_landscape').on('click', function(e) {
+                        console.log(e)
+                    });
+
+                    $('#canvas_landscape').on('mousewheel', function(e) {
+                        //console.log(e.originalEvent)
+                        wD = e.originalEvent.wheelDelta;
+
+                        var context_Landscape = canvas_landscape.getContext('2d');
+
+                        context_Landscape.scale(1 + (wD / 100 / canvas_landscape.width), 1 + (wD / 100 / canvas_landscape.height));
+                        context_Landscape.drawImage(originalLandscape, 0, 0, 720, 480);
+                    });
+                    /*
                     $('#zoomtst').on('click', function() {
                         var img = new Image;
                         img.src = canvas_landscape.toDataURL();
@@ -301,6 +315,7 @@
 
 
                     });
+                    */
                 },
 
                 undefined,
